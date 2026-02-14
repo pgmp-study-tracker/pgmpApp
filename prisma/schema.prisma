@@ -1,0 +1,51 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User for cloud sync - identified by a unique sync code
+model SyncUser {
+  id           String   @id @default(cuid())
+  syncCode     String   @unique // User-friendly code for syncing (e.g., "PGMP-2024-ABCD")
+  name         String?
+  examDate     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  taskProgress TaskProgress[]
+  devices      SyncDevice[]
+}
+
+// Device tracking for multi-device support
+model SyncDevice {
+  id           String   @id @default(cuid())
+  userId       String
+  user         SyncUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName   String
+  deviceType   String   // "iphone", "macbook", "android", etc.
+  lastSyncAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
+}
+
+// Task progress storage
+model TaskProgress {
+  id           String   @id @default(cuid())
+  userId       String
+  user         SyncUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId       String
+  completed    Boolean  @default(false)
+  completedAt  DateTime?
+  skipped      Boolean  @default(false)
+  skippedAt    DateTime?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([userId, taskId]) // One progress record per task per user
+}
